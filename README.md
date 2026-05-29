@@ -1,18 +1,110 @@
-# CFEP
+# Conformal Event Prediction with Temporal Knowledge Graph
 
-# 原始数据
+This repository contains the implementation of **CFEP**, proposed in the paper
+**"Conformal Event Prediction with Temporal Knowledge Graph"**. The paper has
+been accepted by **ACL 2026**.
 
-* data文件夹，包含2015-2022三个地区EG，IR，IS发生事件的csv文件以及对应的事件类型编码本CAMEO
-* 以EG数据集为例，EG.csv中每一个记录即为一条边，实体映射编码为entity2id.txt文件，eventCode映射name为dict_id2ont.json。docs_title_paragraph.json与md5_list.json每一行一一对应，即md5_list.json中的每一行md5加密的网址对应的标题与文章内容
+## Overview
 
-# 数据处理
+CFEP is a conformal prediction framework for event prediction on temporal
+knowledge graphs. Instead of producing only point predictions, CFEP constructs
+prediction sets with statistical coverage guarantees, making event prediction
+more reliable in high-stakes scenarios.
 
-* `python data2id.py`将原始数据中每个地区csv文件的actorname转化为id，规范化EventCode
-* `python split_data.py` 划分数据集，划分为train,valid,calib_train,calib_valid,test，比例为5:1:1:1:2
-* `python generate_data_embedding.py`将新闻文本输入预训练语言模型（bge_base_en_v1.5），得到文本embedding
-* `python get_digraphs_with_embedding.py` 每个时刻构建事件图
+The method addresses the non-exchangeability issue in temporal knowledge graph
+event prediction and improves the efficiency of prediction sets while preserving
+the target coverage.
 
-# 模型训练
+## Method
 
-* 划分数据集为训练集，校验训练集，校验测试集，测试集
-* 训练集上训练模型，校验训练集上训练cp模型，校验测试集上计算阈值，测试集上输出覆盖率
+CFEP contains two main modules:
+
+- **Non-conformity score diffusion**: diffuses non-conformity scores through
+  temporal and topological neighbors in the temporal knowledge graph, so that
+  related events obtain more stable uncertainty estimates.
+- **Efficiency-aware optimization**: learns weighted quantiles to reduce the
+  coverage gap and produce more compact prediction sets while maintaining the
+  required coverage level.
+
+The overall pipeline first trains an event prediction backbone, then computes
+base non-conformity scores on the calibration set, diffuses these scores using
+temporal/topological event relations, and finally constructs prediction sets on
+the test set.
+
+## Repository Structure
+
+```text
+CFEP/
+|-- README.md
+|-- train_cp.py                 # main training and conformal evaluation script
+|-- models.py                   # backbone event prediction models
+|-- propagations.py             # graph propagation layers
+|-- modules_f.py                # attention and neural utility modules
+|-- event_data_processing.py    # temporal event preprocessing utilities
+|-- event_data_processing_ml.py # multi-label distribution utilities
+|-- event_type.csv              # event type metadata
+`-- data/
+    `-- EG/
+        |-- stat.txt
+        |-- train.txt
+        |-- valid.txt
+        `-- test.txt
+```
+
+## Data Preparation
+
+The original data are event records from three regions: Egypt (EG), Iran (IR),
+and Israel (IS). Each event is represented as a temporal knowledge graph edge
+with the format:
+
+```text
+head relation tail time
+```
+
+The preprocessing pipeline follows these steps:
+
+1. Convert actor names and event codes into integer IDs.
+2. Split data into training, validation, calibration-training,
+   calibration-validation, and test sets.
+3. Encode news text with a pretrained language model, such as
+   `bge_base_en_v1.5`.
+4. Build time-indexed directed event graphs with text embeddings.
+
+## Usage
+
+The main entry point is:
+
+```bash
+python train_cp.py --model glean --dataset <DATASET_NAME> --dp <DATA_ROOT>/
+```
+
+For conformal prediction experiments, the expected dataset directory contains:
+
+```text
+train.txt
+valid.txt
+calib_train.txt
+calib_valid.txt
+test.txt
+stat.txt
+```
+
+During training, the backbone event prediction model is trained on the training
+set, the conformal model is optimized on the calibration-training set, the
+quantile threshold is estimated on the calibration-validation set, and coverage
+and efficiency are evaluated on the test set.
+
+## Evaluation
+
+CFEP is evaluated with two metrics:
+
+- **Coverage**: the fraction of test instances whose true event type is included
+  in the prediction set.
+- **Efficiency**: the average size of the prediction set; smaller sets indicate
+  higher efficiency when coverage is preserved.
+
+## Notes
+
+This repository currently provides the core source code and an example processed
+EG split. Some generated artifacts, full raw data, preprocessed graph dictionaries,
+and dependency files may need to be prepared separately for full reproduction.
