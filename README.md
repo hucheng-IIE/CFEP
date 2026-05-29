@@ -31,25 +31,6 @@ base non-conformity scores on the calibration set, diffuses these scores using
 temporal/topological event relations, and finally constructs prediction sets on
 the test set.
 
-## Repository Structure
-
-```text
-CFEP/
-|-- README.md
-|-- train_cp.py                 # main training and conformal evaluation script
-|-- models.py                   # backbone event prediction models
-|-- propagations.py             # graph propagation layers
-|-- modules_f.py                # attention and neural utility modules
-|-- event_data_processing.py    # temporal event preprocessing utilities
-|-- event_data_processing_ml.py # multi-label distribution utilities
-|-- event_type.csv              # event type metadata
-`-- data/
-    `-- EG/
-        |-- stat.txt
-        |-- train.txt
-        |-- valid.txt
-        `-- test.txt
-```
 
 ## Data Preparation
 
